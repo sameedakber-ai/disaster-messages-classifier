@@ -123,11 +123,16 @@ def build_model():
 
 
 def evaluate_model(model, X_test, Y_test, category_names):
-    pass
-
+    Y_pred = model.predict(X_test)
+    evaluations = defaultdict(str)
+    for i,cat in enumerate(category_names):
+        pred = Y_pred[:,i]
+        test = Y_test[:,i]
+        evaluations[cat] = classification_report(test, pred, labels = np.unique(pred), output_dict=True)
+    return evaluations
 
 def save_model(model, model_filepath):
-    pass
+    pickle.dump(model, open(model_filepath, "wb"))
 
 
 def main():
