@@ -32,11 +32,19 @@ from sklearn.ensemble import GradientBoostingClassifier
 from sklearn.model_selection import GridSearchCV
 
 def load_data(database_filepath):
-    pass
+    engine = create_engine('sqlite:///{}'.format(database_filepath))
+    df = pd.read_sql('SELECT * FROM categories', con=engine)
+    X = df.message.values
+    Y = df.iloc[:,4:].values
+    category_names = df.iloc[:,4:].columns.tolist()
+    return X, Y, category_names
 
 
 def tokenize(text):
-    pass
+    text = re.sub(r'[^a-zA-Z0-9]', ' ', text)
+    tokens = word_tokenize(text)
+    clean_tokens = [WordNetLemmatizer().lemmatize(w.lower()) for w in tokens if w not in stopwords.words('english')]
+    return clean_tokens
 
 
 def build_model():
