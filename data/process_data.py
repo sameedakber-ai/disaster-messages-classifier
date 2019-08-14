@@ -24,8 +24,8 @@ def clean_data(df):
 
     return df
 
-def save_data(df, database_filename):
-    engine = create_engine('sqlite:///{}'.format(database_filename))
+def save_data(df, database_filepath):
+    engine = create_engine('sqlite:///{}'.format(database_filepath))
     df.to_sql('categories', engine, index=False, if_exists='replace')
 
 
