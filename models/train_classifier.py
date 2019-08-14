@@ -48,7 +48,78 @@ def tokenize(text):
 
 
 def build_model():
-    pass
+
+    class MessageLengthExtractor(BaseEstimator, TransformerMixin):
+        def message_length(self, text):
+            return len(tokenize(text))
+
+        def fit(self, X, y=None):
+            return self
+
+        def transform(self, X, y=None):
+            lengths = pd.Series(X).apply(self.message_length)
+            return lengths.values.reshape(-1,1)
+
+
+
+    class StartingVerbExtractor(BaseEstimator, TransformerMixin):
+
+        def starting_verb(self, text):
+            sentence_list = nltk.sent_tokenize(text)
+            for sentence in sentence_list:
+                pos_tags = nltk.pos_tag(tokenize(sentence))
+                first_word, first_tag = pos_tags[0]
+                if first_tag in ['VB', 'VBP'] or first_word == 'RT':
+                    return True
+            return False
+
+        def fit(self, x, y=None):
+            return self
+
+        def transform(self, X):
+            X_tagged = pd.Series(X).apply(self.starting_verb)
+            return pd.DataFrame(X_tagged)
+
+
+
+    pipeline = Pipeline([
+    
+        ('features', FeatureUnion([
+        
+            ('text_pipeline', Pipeline([
+                ('vect', CountVectorizer(tokenizer=tokenize)),
+                ('tfidf', TfidfTransformer())
+            ])),
+        
+            ('verb', StartingVerbExtractor()),
+        
+            ('length', MessageLengthExtractor())
+        
+        ])),
+    
+        ('clf', MultiOutputClassifier(LinearSVC(class_weight='balanced', dual=True), n_jobs=-1))
+    
+    ])
+
+
+
+    parameters = {
+            'vect__ngram_range': [(1, 1), (1, 2)],
+            'vect__max_df': [0.5, 0.75, 1.0],
+            'vect__max_features': [500, 5000, 10000],
+            'tfidf__use_idf': [True, False],
+            'clf__estimator__C': [0.1, 0.5, 1],
+            'features__transformer_weights':(
+                {'text_pipeline': 1, 'verb': 1, 'length': 1},
+                {'text_pipeline': 1, 'verb': 0.5, 'length': 0.5},
+            )
+    }
+
+
+
+    cv = GridSearchCV(pipeline, param_grid=parameters, cv=3, verbose=2, n_jobs=-1)
+
+    return cv
 
 
 def evaluate_model(model, X_test, Y_test, category_names):
