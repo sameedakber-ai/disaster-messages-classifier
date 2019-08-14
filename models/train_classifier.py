@@ -8,6 +8,7 @@ import nltk
 nltk.download(['stopwords', 'punkt', 'averaged_perceptron_tagger', 'wordnet'])
 from scipy import sparse
 from collections import defaultdict
+import pickle
 
 from nltk import pos_tag
 from nltk.corpus import stopwords
@@ -35,8 +36,8 @@ def load_data(database_filepath):
     engine = create_engine('sqlite:///{}'.format(database_filepath))
     df = pd.read_sql_table('categories', con=engine)
     X = df.message.values
-    Y = df.iloc[:,4:].values
-    category_names = df.iloc[:,4:].columns.tolist()
+    Y = df.iloc[:,5:].values
+    category_names = df.iloc[:,5:].columns.tolist()
     return X, Y, category_names
 
 
@@ -116,7 +117,6 @@ def build_model():
                 {'text_pipeline': 1, 'verb': 0.5, 'length': 0.5},
             )
     }
-
 
 
     cv = GridSearchCV(pipeline, param_grid=parameters, cv=3, verbose=3, scoring='f1_weighted')
