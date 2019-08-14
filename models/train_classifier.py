@@ -97,7 +97,7 @@ def build_model():
         
         ])),
     
-        ('clf', MultiOutputClassifier(LinearSVC(class_weight='balanced', dual=True), n_jobs=-1))
+        ('clf', MultiOutputClassifier(LinearSVC(class_weight='balanced', dual=True), n_jobs=4))
     
     ])
 
@@ -117,7 +117,7 @@ def build_model():
 
 
 
-    cv = GridSearchCV(pipeline, param_grid=parameters, cv=3, verbose=2, n_jobs=-1)
+    cv = GridSearchCV(pipeline, param_grid=parameters, cv=3, verbose=2, n_jobs=4)
 
     return cv
 
