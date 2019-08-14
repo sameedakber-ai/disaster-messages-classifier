@@ -15,8 +15,8 @@ def clean_data(df):
     category_colnames = row.apply(lambda x: x[:-2])
     categories.columns = category_colnames
     for column in categories.columns:
-    categories[column] = categories[column].str.split('-').str[1]
-    categories[column] = pd.to_numeric(categories[column])
+        categories[column] = categories[column].str.split('-').str[1]
+        categories[column] = pd.to_numeric(categories[column])
 
     df = pd.concat([df.drop('categories', axis=1),categories], axis=1)
 
