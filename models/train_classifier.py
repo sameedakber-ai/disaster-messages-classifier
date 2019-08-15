@@ -16,7 +16,7 @@ from nltk.stem import WordNetLemmatizer
 from nltk.tokenize import word_tokenize, sent_tokenize
 
 from sklearn.pipeline import Pipeline,FeatureUnion
-from sklearn.preprocessing import StandardScalar
+from sklearn.preprocessing import StandardScaler
 from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report
@@ -56,6 +56,9 @@ def build_model():
 
         def transform(self, X, y=None):
             lengths = pd.Series(X).apply(self.message_length)
+            mu = lengths.mean()
+            stdev = lengths.std()
+            lengths = lengths.apply(lambda x: (x-mu)/stdev)
             return lengths.values.reshape(-1,1)
 
 
@@ -97,9 +100,9 @@ def build_model():
         
         ])),
 
-        ('scalar', StandardScalar()),
+        ('scalar', StandardScaler()),
     
-        ('clf', MultiOutputClassifier(LinearSVC(class_weight='balanced', dual=True), n_jobs=-1))
+        ('clf', MultiOutputClassifier(LinearSVC(class_weight='balanced', dual=True, max_iter=700), n_jobs=-1))
     
     ])
 
