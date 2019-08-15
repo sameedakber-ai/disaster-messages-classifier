@@ -32,7 +32,7 @@ def load_data(database_filepath):
     df.drop(columns_not_for_analysis, axis=1, inplace=True)
     X = df.message.values
     Y = df.drop('message', axis=1).values
-    category_names = df.iloc[:,1:].columns.tolist()
+    category_names = df.drop('message', axis=1).columns.tolist()
 
     return X, Y, category_names
 
