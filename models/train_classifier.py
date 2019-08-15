@@ -16,6 +16,7 @@ from nltk.stem import WordNetLemmatizer
 from nltk.tokenize import word_tokenize, sent_tokenize
 
 from sklearn.pipeline import Pipeline,FeatureUnion
+from sklearn.preprocessing import StandardScalar
 from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report
@@ -95,6 +96,8 @@ def build_model():
             ('length', MessageLengthExtractor())
         
         ])),
+
+        ('scalar', StandardScalar()),
     
         ('clf', MultiOutputClassifier(LinearSVC(class_weight='balanced', dual=True), n_jobs=-1))
     
