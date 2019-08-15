@@ -99,10 +99,8 @@ def build_model():
             ('length', MessageLengthExtractor())
         
         ])),
-
-        ('scalar', StandardScaler()),
     
-        ('clf', MultiOutputClassifier(LinearSVC(class_weight='balanced', dual=True, max_iter=700), n_jobs=-1))
+        ('clf', MultiOutputClassifier(LinearSVC(class_weight='balanced', dual=True, max_iter=1000), n_jobs=-1))
     
     ])
 
@@ -110,10 +108,9 @@ def build_model():
 
     parameters = {
             'features__text_pipeline__vect__ngram_range': [(1, 1), (1, 2)],
-            'features__text_pipeline__vect__max_df': [0.5, 0.75, 1.0],
-            'features__text_pipeline__vect__max_features': [500, 5000, 10000],
-            'features__text_pipeline__tfidf__use_idf': [True, False],
-            'clf__estimator__C': [0.1, 0.5, 1],
+            'features__text_pipeline__vect__max_df': [0.5],
+            'features__text_pipeline__vect__max_features': [10000],
+            'clf__estimator__C': [0.08, 0.1],
             'features__transformer_weights':(
                 {'text_pipeline': 1, 'verb': 1, 'length': 1},
                 {'text_pipeline': 1, 'verb': 0.5, 'length': 0.5},
