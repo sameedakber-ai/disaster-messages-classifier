@@ -24,17 +24,16 @@ from sklearn.base import BaseEstimator, TransformerMixin
 
 from sklearn.multioutput import MultiOutputClassifier
 from sklearn.svm import LinearSVC
+from sklearn.linear_model import SGDClassifier
 from sklearn.model_selection import GridSearchCV
 
 def load_data(database_filepath):
     engine = create_engine('sqlite:///{}'.format(database_filepath))
     df = pd.read_sql_table('categories', con=engine)
-    columns_not_for_analysis = ['related', 'child_alone', 'id', 'original', 'genre']
-    df.drop(columns_not_for_analysis, axis=1, inplace=True)
-    X = df.message.values
-    Y = df.drop('message', axis=1).values
-    category_names = df.drop('message', axis=1).columns.tolist()
-
+    df.drop('child_alone', axis=1, inplace=True)
+    category_names = df.iloc[:,5:].columns.tolist()
+    X = df.message
+    Y = df[category_names].values
     return X, Y, category_names
 
 
@@ -49,16 +48,17 @@ def build_model():
 
     class MessageLengthExtractor(BaseEstimator, TransformerMixin):
         def message_length(self, text):
-            return len(tokenize(text))
+            tokenized = tokenize(text)
+            if tokenized:
+                return len(tokenized)
+            else:
+                return 0
 
         def fit(self, X, y=None):
             return self
 
         def transform(self, X, y=None):
             lengths = pd.Series(X).apply(self.message_length)
-            mu = lengths.mean()
-            stdev = lengths.std()
-            lengths = lengths.apply(lambda x: (x-mu)/stdev)
             return lengths.values.reshape(-1,1)
 
 
@@ -96,29 +96,33 @@ def build_model():
         
             ('verb', StartingVerbExtractor()),
         
-            ('length', MessageLengthExtractor())
+            ('length_pipeline', Pipeline([
+                ('length', MessageLengthExtractor()),
+                ('scalar', StandardScaler())
+            ]))
         
         ])),
     
-        ('clf', MultiOutputClassifier(LinearSVC(class_weight='balanced', dual=True, max_iter=1000), n_jobs=-1))
+        ('clf', MultiOutputClassifier(LinearSVC(max_iter=5000, class_weight = 'balanced'), n_jobs=-1))
     
     ])
 
 
 
     parameters = {
-            'features__text_pipeline__vect__ngram_range': [(1, 1), (1, 2)],
+            'features__text_pipeline__vect__ngram_range': [(1, 1)],
             'features__text_pipeline__vect__max_df': [0.5],
-            'features__text_pipeline__vect__max_features': [10000],
-            'clf__estimator__C': [0.08, 0.1],
+            'features__text_pipeline__vect__max_features': [10000, 15000],
+            'clf__estimator__C': [0.1, 0.25],
             'features__transformer_weights':(
-                {'text_pipeline': 1, 'verb': 1, 'length': 1},
-                {'text_pipeline': 1, 'verb': 0.5, 'length': 0.5},
+                {'text_pipeline': 1, 'verb': 1, 'length_pipeline': 1},
+                {'text_pipeline': 1, 'verb': 0.5, 'length_pipeline': 0.5},
+                {'text_pipeline': 1, 'verb': 0.25, 'length_pipeline': 0.25}
             )
     }
 
 
-    cv = GridSearchCV(pipeline, param_grid=parameters, cv=3, verbose=3, scoring='f1_weighted')
+    cv = GridSearchCV(pipeline, param_grid=parameters, cv=3, verbose=4, scoring='f1_micro')
 
     return cv
 
@@ -130,6 +134,9 @@ def evaluate_model(model, X_test, Y_test, category_names):
         pred = Y_pred[:,i]
         test = Y_test[:,i]
         evaluations[cat] = classification_report(test, pred, labels = np.unique(pred), output_dict=True)
+        print(cat, '\n')
+        print(classification_report(test, pred, labels = np.unique(pred)))
+        print('\n\n')
     return evaluations
 
 def save_model(model, model_filepath):
@@ -150,7 +157,7 @@ def main():
         model.fit(X_train, Y_train)
         
         print('Evaluating model...')
-        evaluate_model(model, X_test, Y_test, category_names)
+        evaluations = evaluate_model(model, X_test, Y_test, category_names)
 
         print('Saving model...\n    MODEL: {}'.format(model_filepath))
         save_model(model, model_filepath)
