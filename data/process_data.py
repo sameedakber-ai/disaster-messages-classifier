@@ -23,7 +23,6 @@ def clean_data(df):
     df = df[~df.duplicated()]
 
     df.related.where(df.related != 2, 0, inplace=True)
-    df.child_alone[0] = 1
 
     return df
 
