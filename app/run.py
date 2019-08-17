@@ -78,6 +78,8 @@ def index():
 
     named_entity_data = pd.DataFrame({'Non Related': named_enities_present_related.sum(axis=0),
     'Related': named_enities_present_non_related.sum(axis=0)}, index=all_named_entities.values())
+
+    categories_count = df[df.related==1].iloc[:,5:].sum(axis=0).sort_values(ascending=False)
     
     # create visuals
     # TODO: Below is an example - modify to create your own visuals
@@ -121,6 +123,25 @@ def index():
                 },
                 'xaxis': {
                     'title': 'Named Entities'
+                }
+            }
+        },
+
+        {
+            'data': [
+                Bar(
+                    x=categories_count.index.tolist(),
+                    y=categories_count.values.tolist()
+                )
+            ],
+
+            'layout': {
+                'title': 'Category Counts for Related Messages',
+                'yaxis': {
+                    'title': 'Count'
+                },
+                'xaxis': {
+                    'title': 'categories'
                 }
             }
         },
