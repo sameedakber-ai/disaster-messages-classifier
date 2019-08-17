@@ -24,8 +24,6 @@ def clean_data(df):
 
     df.related.where(df.related != 2, 0, inplace=True)
 
-    df.drop('child_alone', axis=1, inplace=True)
-
     return df
 
 def save_data(df, database_filepath):
