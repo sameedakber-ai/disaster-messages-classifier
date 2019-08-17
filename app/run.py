@@ -1,109 +1,51 @@
+import sys
+sys.path.insert(1, 'c:/code/Udacity/disaster_response/backend_analysis')
+
 import json
 import plotly
 import pandas as pd
-
-from nltk.stem import WordNetLemmatizer
-from nltk.tokenize import word_tokenize
+import pickle
 
 from flask import Flask
 from flask import render_template, request, jsonify
 from plotly.graph_objs import Bar
-from sklearn.externals import joblib
-from sqlalchemy import create_engine
+from plotly.graph_objs import Scatter
 
-import spacy
-from spacy import displacy
-from collections import Counter
-import en_core_web_sm
-nlp = en_core_web_sm.load()
-
-from sklearn.base import BaseEstimator, TransformerMixin
+from classes import *
 
 
 app = Flask(__name__)
 
-class IsEntityPresent(BaseEstimator, TransformerMixin):
-    def present_entities(self, text):
-        text = nlp(text)
-        labels = set([x.label_ for x in text.ents])
-        return [1 if entity in labels else 0 for entity in all_named_entities.keys()]
-    
-    def fit(self, X, y=None):
-        return self
-    
-    def transform(self, X, y=None):
-        entities =  pd.Series(X).apply(self.present_entities)
-        return np.array(entities.values.tolist())
-
-class MessageLengthExtractor(BaseEstimator, TransformerMixin):
-    def message_length(self, text):
-        tokenized = tokenize(text)
-        if tokenized:
-            return len(tokenized)
-        else:
-            return 0
-
-    def fit(self, X, y=None):
-        return self
-
-    def transform(self, X, y=None):
-        lengths = pd.Series(X).apply(self.message_length)
-        return lengths.values.reshape(-1,1)
-
-def tokenize(text):
-    tokens = word_tokenize(text)
-    lemmatizer = WordNetLemmatizer()
-
-    clean_tokens = []
-    for tok in tokens:
-        clean_tok = lemmatizer.lemmatize(tok).lower().strip()
-        clean_tokens.append(clean_tok)
-
-    return clean_tokens
-
-
 # load data
-engine = create_engine('sqlite:///../data/disaster_database.db')
+engine = create_engine('sqlite:///data/disaster_database.db')
 df = pd.read_sql_table('categories', engine)
 
 # load model
-model = joblib.load("../models/analyze_disaster_messages.pkl")
+model = pickle.load(open("models/analyze_disaster_messages.pkl", 'rb'))
 
+
+print('Building Visualizations...')
+
+# extract data needed for visuals
+genre_counts = df.groupby('genre').count()['message']
+genre_names = list(genre_counts.index)
+
+named_enities_present_related = IsEntityPresent().fit_transform(df.message[df.related==1])
+named_enities_present_non_related = IsEntityPresent().fit_transform(related.message[df.related==0])
+named_entity_data = pd.DataFrame({'Non Related': named_enities_present_related.sum(axis=0),
+    'Related': named_enities_present_non_related.sum(axis=0)}, index=all_named_entities.values())
+
+
+categories_count = df[df.related==1].iloc[:,5:].sum(axis=0).sort_values(ascending=False)
+
+number_of_related = df[df.related==1].iloc[:,5:].sum(axis=1).value_counts().sort_values(ascending=False)
 
 # index webpage displays cool visuals and receives user input text for model
 @app.route('/')
 @app.route('/index')
 def index():
-    
-    # extract data needed for visuals
-    # TODO: Below is an example - modify to extract data for your own visuals
-    genre_counts = df.groupby('genre').count()['message']
-    genre_names = list(genre_counts.index)
-
-
-    all_named_entities = {'NORP':'Nationalities','FAC':'Buildings, airports, highways','ORG':'Organizations',
-    'GPE':'Geo-Political Location','LOC':'Non GPE Locations','PRODUCT':'Objects, vehicles, foods','EVENT':'Named Events',
-    'DATE':'Date','TIME':'Time','PERCENT':'Percentage','MONEY':'Money','QUANTITY':'Quantity'}
-
-    named_enities_present_related = IsEntityPresent().fit_transform(df.message[df.related==1])
-    named_enities_present_non_related = IsEntityPresent().fit_transform(related.message[df.related==0])
-
-    named_entity_data = pd.DataFrame({'Non Related': named_enities_present_related.sum(axis=0),
-    'Related': named_enities_present_non_related.sum(axis=0)}, index=all_named_entities.values())
-
-
-    categories_count = df[df.related==1].iloc[:,5:].sum(axis=0).sort_values(ascending=False)
-
-    number_of_related = df[df.related==1].iloc[:,5:].sum(axis=1).value_counts().sort_values(ascending=False)
-    
-
-    length = MessageLengthExtractor().fit_transform(df.message[df.related==1].values)
-    counts = df[df.related==1].iloc[:,4:].sum(axis=1).values.reshape(-1,1)
-    length_count_df = pd.DataFrame(np.concatenate((length,counts), axis=1), columns=['message_lengths', 'related_counts'])
-
 
     # create visuals
-    # TODO: Below is an example - modify to create your own visuals
     graphs = [
         {
             'data': [
