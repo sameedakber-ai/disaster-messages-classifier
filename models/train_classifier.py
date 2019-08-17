@@ -98,7 +98,8 @@ class IsEntityPresent(BaseEstimator, TransformerMixin):
 def load_data(database_filepath):
     engine = create_engine('sqlite:///{}'.format(database_filepath))
     df = pd.read_sql_table('categories', con=engine)
-    category_names = df.iloc[:,5:].columns.tolist()
+    df.drop('child_alone', axis=1, inplace=True)
+    category_names = df.iloc[:,4:].columns.tolist()
     X = df.message.values
     Y = df[category_names].values
     return X, Y, category_names
