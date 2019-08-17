@@ -1,111 +1,20 @@
 import sys
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-from sqlalchemy import create_engine
-from scipy import sparse
-from collections import defaultdict
-import pickle
-import re
 
-import nltk
-from nltk import pos_tag
-from nltk.corpus import stopwords
-from nltk.stem import WordNetLemmatizer
-from nltk.tokenize import word_tokenize, sent_tokenize
-nltk.download(['stopwords', 'punkt', 'averaged_perceptron_tagger', 'wordnet'])
+sys.path.insert(1, 'c:/code/Udacity/disaster_response/backend_analysis')
 
-import spacy
-from spacy import displacy
-from collections import Counter
-import en_core_web_sm
-nlp = en_core_web_sm.load()
+from classes import *
 
-from sklearn.pipeline import Pipeline,FeatureUnion
-from sklearn.preprocessing import StandardScaler
-from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import classification_report
-from sklearn.metrics import precision_recall_fscore_support
-from sklearn.base import BaseEstimator, TransformerMixin
-
-from sklearn.multioutput import MultiOutputClassifier
-from sklearn.svm import LinearSVC
-from sklearn.linear_model import SGDClassifier
-from sklearn.model_selection import GridSearchCV
-
-all_entities = ['NORP','FAC','ORG','GPE','LOC','PRODUCT','EVENT','DATE','TIME','PERCENT','MONEY','QUANTITY']
-
-def tokenize(text):
-    text = re.sub(r'[^a-zA-Z0-9]', ' ', text)
-    tokens = word_tokenize(text)
-    clean_tokens = [WordNetLemmatizer().lemmatize(w.lower()) for w in tokens if w not in stopwords.words('english')]
-    return clean_tokens
-
-class MessageLengthExtractor(BaseEstimator, TransformerMixin):
-
-        def message_length(self, text):
-            tokenized = tokenize(text)
-            if tokenized:
-                return len(tokenized)
-            else:
-                return 0
-
-        def fit(self, X, y=None):
-            return self
-
-        def transform(self, X, y=None):
-            lengths = pd.Series(X).apply(self.message_length)
-            return lengths.values.reshape(-1,1)
-
-
-class StartingVerbExtractor(BaseEstimator, TransformerMixin):
-
-    def starting_verb(self, text):
-        sentence_list = nltk.sent_tokenize(text)
-        for sentence in sentence_list:
-            tokenized = tokenize(sentence)
-            if tokenized:
-                pos_tags = nltk.pos_tag(tokenized)
-                first_word, first_tag = pos_tags[0]
-                if first_tag in ['VB', 'VBP'] or first_word == 'RT':
-                    return True
-        return False
-
-    def fit(self, x, y=None):
-        return self
-
-    def transform(self, X):
-        X_tagged = pd.Series(X).apply(self.starting_verb)
-        return X_tagged.values.reshape(-1,1)
-
-
-
-class IsEntityPresent(BaseEstimator, TransformerMixin):
-
-    def present_entities(self, text):
-        text = nlp(text)
-        labels = set([x.label_ for x in text.ents])
-        return [1 if entity in labels else 0 for entity in all_entities]
-    
-    def fit(self, X, y=None):
-        return self
-    
-    def transform(self, X, y=None):
-        entities =  pd.Series(X).apply(self.present_entities)
-        return np.array(entities.values.tolist())
 
 def load_data(database_filepath):
     engine = create_engine('sqlite:///{}'.format(database_filepath))
     df = pd.read_sql_table('categories', con=engine)
-    df.drop('child_alone', axis=1, inplace=True)
     category_names = df.iloc[:,4:].columns.tolist()
     X = df.message.values
     Y = df[category_names].values
     return X, Y, category_names
 
 
-def build_model():
+def build_model(X_train, Y_train):
 
     pipeline = Pipeline([
     
@@ -145,7 +54,9 @@ def build_model():
 
     cv = GridSearchCV(pipeline, param_grid=parameters, cv=3, verbose=4, scoring='f1_micro')
 
-    return cv
+    cv.fit(X_train, Y_train)
+
+    return cv.best_estimator_
 
 
 def evaluate_model(model, X_test, Y_test, category_names):
@@ -173,11 +84,8 @@ def main():
         X, Y, category_names = load_data(database_filepath)
         X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.2)
         
-        print('Building model...')
-        model = build_model()
-        
-        print('Training model...')
-        model.fit(X_train, Y_train)
+        print('Building And Training model...')
+        model = build_model(X_train, Y_train)
         
         print('Evaluating model...')
         evaluations = evaluate_model(model, X_test, Y_test, category_names)
