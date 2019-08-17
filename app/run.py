@@ -35,6 +35,21 @@ class IsEntityPresent(BaseEstimator, TransformerMixin):
         entities =  pd.Series(X).apply(self.present_entities)
         return np.array(entities.values.tolist())
 
+class MessageLengthExtractor(BaseEstimator, TransformerMixin):
+    def message_length(self, text):
+        tokenized = tokenize(text)
+        if tokenized:
+            return len(tokenized)
+        else:
+            return 0
+
+    def fit(self, X, y=None):
+        return self
+
+    def transform(self, X, y=None):
+        lengths = pd.Series(X).apply(self.message_length)
+        return lengths.values.reshape(-1,1)
+
 def tokenize(text):
     tokens = word_tokenize(text)
     lemmatizer = WordNetLemmatizer()
@@ -45,7 +60,6 @@ def tokenize(text):
         clean_tokens.append(clean_tok)
 
     return clean_tokens
-
 
 
 # load data
@@ -66,8 +80,6 @@ def index():
     genre_counts = df.groupby('genre').count()['message']
     genre_names = list(genre_counts.index)
 
-    class_distributions = df.iloc[:,5:]
-
 
     all_named_entities = {'NORP':'Nationalities','FAC':'Buildings, airports, highways','ORG':'Organizations',
     'GPE':'Geo-Political Location','LOC':'Non GPE Locations','PRODUCT':'Objects, vehicles, foods','EVENT':'Named Events',
@@ -79,8 +91,17 @@ def index():
     named_entity_data = pd.DataFrame({'Non Related': named_enities_present_related.sum(axis=0),
     'Related': named_enities_present_non_related.sum(axis=0)}, index=all_named_entities.values())
 
+
     categories_count = df[df.related==1].iloc[:,5:].sum(axis=0).sort_values(ascending=False)
+
+    number_of_related = df[df.related==1].iloc[:,5:].sum(axis=1).value_counts().sort_values(ascending=False)
     
+
+    length = MessageLengthExtractor().fit_transform(df.message[df.related==1].values)
+    counts = df[df.related==1].iloc[:,4:].sum(axis=1).values.reshape(-1,1)
+    length_count_df = pd.DataFrame(np.concatenate((length,counts), axis=1), columns=['message_lengths', 'related_counts'])
+
+
     # create visuals
     # TODO: Below is an example - modify to create your own visuals
     graphs = [
@@ -148,8 +169,21 @@ def index():
 
         {
             'data': [
-                
-            ]
+                Scatter(
+                    x=number_of_related.index.tolist(),
+                    y=number_of_related.values.tolist()
+                )
+            ],
+
+            'layout': {
+                'title': 'Messages having Multiple Labels',
+                'yaxis': {
+                    'title': 'Count'
+                },
+                'xaxis': {
+                    'title': 'Number of Related Labels'
+                }
+            }
         }
     ]
     
