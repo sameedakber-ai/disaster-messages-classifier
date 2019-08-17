@@ -3,23 +3,30 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from sqlalchemy import create_engine
-import re
-import nltk
-nltk.download(['stopwords', 'punkt', 'averaged_perceptron_tagger', 'wordnet'])
 from scipy import sparse
 from collections import defaultdict
 import pickle
+import re
 
+import nltk
 from nltk import pos_tag
 from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
 from nltk.tokenize import word_tokenize, sent_tokenize
+nltk.download(['stopwords', 'punkt', 'averaged_perceptron_tagger', 'wordnet'])
+
+import spacy
+from spacy import displacy
+from collections import Counter
+import en_core_web_sm
+nlp = en_core_web_sm.load()
 
 from sklearn.pipeline import Pipeline,FeatureUnion
 from sklearn.preprocessing import StandardScaler
 from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report
+from sklearn.metrics import precision_recall_fscore_support
 from sklearn.base import BaseEstimator, TransformerMixin
 
 from sklearn.multioutput import MultiOutputClassifier
@@ -27,15 +34,7 @@ from sklearn.svm import LinearSVC
 from sklearn.linear_model import SGDClassifier
 from sklearn.model_selection import GridSearchCV
 
-def load_data(database_filepath):
-    engine = create_engine('sqlite:///{}'.format(database_filepath))
-    df = pd.read_sql_table('categories', con=engine)
-    df.drop('child_alone', axis=1, inplace=True)
-    category_names = df.iloc[:,5:].columns.tolist()
-    X = df.message
-    Y = df[category_names].values
-    return X, Y, category_names
-
+all_entities = ['NORP','FAC','ORG','GPE','LOC','PRODUCT','EVENT','DATE','TIME','PERCENT','MONEY','QUANTITY']
 
 def tokenize(text):
     text = re.sub(r'[^a-zA-Z0-9]', ' ', text)
@@ -43,10 +42,8 @@ def tokenize(text):
     clean_tokens = [WordNetLemmatizer().lemmatize(w.lower()) for w in tokens if w not in stopwords.words('english')]
     return clean_tokens
 
+class MessageLengthExtractor(BaseEstimator, TransformerMixin):
 
-def build_model():
-
-    class MessageLengthExtractor(BaseEstimator, TransformerMixin):
         def message_length(self, text):
             tokenized = tokenize(text)
             if tokenized:
@@ -62,40 +59,66 @@ def build_model():
             return lengths.values.reshape(-1,1)
 
 
+class StartingVerbExtractor(BaseEstimator, TransformerMixin):
 
-    class StartingVerbExtractor(BaseEstimator, TransformerMixin):
+    def starting_verb(self, text):
+        sentence_list = nltk.sent_tokenize(text)
+        for sentence in sentence_list:
+            tokenized = tokenize(sentence)
+            if tokenized:
+                pos_tags = nltk.pos_tag(tokenized)
+                first_word, first_tag = pos_tags[0]
+                if first_tag in ['VB', 'VBP'] or first_word == 'RT':
+                    return True
+        return False
 
-        def starting_verb(self, text):
-            sentence_list = nltk.sent_tokenize(text)
-            for sentence in sentence_list:
-                tokenized = tokenize(sentence)
-                if tokenized:
-                    pos_tags = nltk.pos_tag(tokenized)
-                    first_word, first_tag = pos_tags[0]
-                    if first_tag in ['VB', 'VBP'] or first_word == 'RT':
-                        return True
-            return False
+    def fit(self, x, y=None):
+        return self
 
-        def fit(self, x, y=None):
-            return self
-
-        def transform(self, X):
-            X_tagged = pd.Series(X).apply(self.starting_verb)
-            return X_tagged.values.reshape(-1,1)
+    def transform(self, X):
+        X_tagged = pd.Series(X).apply(self.starting_verb)
+        return X_tagged.values.reshape(-1,1)
 
 
+
+class IsEntityPresent(BaseEstimator, TransformerMixin):
+
+    def present_entities(self, text):
+        text = nlp(text)
+        labels = set([x.label_ for x in text.ents])
+        return [1 if entity in labels else 0 for entity in all_entities]
+    
+    def fit(self, X, y=None):
+        return self
+    
+    def transform(self, X, y=None):
+        entities =  pd.Series(X).apply(self.present_entities)
+        return np.array(entities.values.tolist())
+
+def load_data(database_filepath):
+    engine = create_engine('sqlite:///{}'.format(database_filepath))
+    df = pd.read_sql_table('categories', con=engine)
+    category_names = df.iloc[:,5:].columns.tolist()
+    X = df.message.values
+    Y = df[category_names].values
+    return X, Y, category_names
+
+
+def build_model():
 
     pipeline = Pipeline([
     
         ('features', FeatureUnion([
         
             ('text_pipeline', Pipeline([
-                ('vect', CountVectorizer(tokenizer=tokenize)),
+                ('vect', CountVectorizer(tokenizer=tokenize, max_df=0.65)),
                 ('tfidf', TfidfTransformer())
             ])),
-        
+
+            ('entity', IsEntityPresent()),
+
             ('verb', StartingVerbExtractor()),
-        
+
             ('length_pipeline', Pipeline([
                 ('length', MessageLengthExtractor()),
                 ('scalar', StandardScaler())
@@ -103,21 +126,18 @@ def build_model():
         
         ])),
     
-        ('clf', MultiOutputClassifier(LinearSVC(max_iter=5000, class_weight = 'balanced'), n_jobs=-1))
+        ('clf', MultiOutputClassifier(LinearSVC(max_iter=5000), n_jobs=-1))
     
     ])
 
 
-
     parameters = {
-            'features__text_pipeline__vect__ngram_range': [(1, 1)],
-            'features__text_pipeline__vect__max_df': [0.5],
-            'features__text_pipeline__vect__max_features': [10000, 15000],
-            'clf__estimator__C': [0.1, 0.25],
+            'features__text_pipeline__vect__max_df': [0.4, 0.7],
+            'features__text_pipeline__vect__max_features': [7500, 12000],
+            'clf__estimator__C': [0.5, 0.8],
             'features__transformer_weights':(
-                {'text_pipeline': 1, 'verb': 1, 'length_pipeline': 1},
-                {'text_pipeline': 1, 'verb': 0.5, 'length_pipeline': 0.5},
-                {'text_pipeline': 1, 'verb': 0.25, 'length_pipeline': 0.25}
+                {'text_pipeline': 1, 'entity': 1, 'length_pipeline': 1, 'verb': 1},
+                {'text_pipeline': 1, 'entity': 0, 'length_pipeline': 0.5, 'verb': 0.5}
             )
     }
 
@@ -129,15 +149,17 @@ def build_model():
 
 def evaluate_model(model, X_test, Y_test, category_names):
     Y_pred = model.predict(X_test)
-    evaluations = defaultdict(str)
     for i,cat in enumerate(category_names):
         pred = Y_pred[:,i]
         test = Y_test[:,i]
-        evaluations[cat] = classification_report(test, pred, labels = np.unique(pred), output_dict=True)
         print(cat, '\n')
         print(classification_report(test, pred, labels = np.unique(pred)))
         print('\n\n')
-    return evaluations
+    pr_re_f_sup = precision_recall_fscore_support(Y_test, Y_pred, average='micro')
+    print('Overall scoring metrics (micro-averged):', '\n')
+    print('Precision: ', pr_re_f_sup[0], '\n')
+    print('Recall: ', pr_re_f_sup[1], '\n')
+    print('F1 score: ', pr_re_f_sup[2], '\n\n')
 
 def save_model(model, model_filepath):
     pickle.dump(model, open(model_filepath, "wb"))
