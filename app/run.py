@@ -11,8 +11,29 @@ from plotly.graph_objs import Bar
 from sklearn.externals import joblib
 from sqlalchemy import create_engine
 
+import spacy
+from spacy import displacy
+from collections import Counter
+import en_core_web_sm
+nlp = en_core_web_sm.load()
+
+from sklearn.base import BaseEstimator, TransformerMixin
+
 
 app = Flask(__name__)
+
+class IsEntityPresent(BaseEstimator, TransformerMixin):
+    def present_entities(self, text):
+        text = nlp(text)
+        labels = set([x.label_ for x in text.ents])
+        return [1 if entity in labels else 0 for entity in all_named_entities.keys()]
+    
+    def fit(self, X, y=None):
+        return self
+    
+    def transform(self, X, y=None):
+        entities =  pd.Series(X).apply(self.present_entities)
+        return np.array(entities.values.tolist())
 
 def tokenize(text):
     tokens = word_tokenize(text)
@@ -25,12 +46,14 @@ def tokenize(text):
 
     return clean_tokens
 
+
+
 # load data
-engine = create_engine('sqlite:///../data/YourDatabaseName.db')
-df = pd.read_sql_table('YourTableName', engine)
+engine = create_engine('sqlite:///../data/disaster_database.db')
+df = pd.read_sql_table('categories', engine)
 
 # load model
-model = joblib.load("../models/your_model_name.pkl")
+model = joblib.load("../models/analyze_disaster_messages.pkl")
 
 
 # index webpage displays cool visuals and receives user input text for model
@@ -42,6 +65,19 @@ def index():
     # TODO: Below is an example - modify to extract data for your own visuals
     genre_counts = df.groupby('genre').count()['message']
     genre_names = list(genre_counts.index)
+
+    class_distributions = df.iloc[:,5:]
+
+
+    all_named_entities = {'NORP':'Nationalities','FAC':'Buildings, airports, highways','ORG':'Organizations',
+    'GPE':'Geo-Political Location','LOC':'Non GPE Locations','PRODUCT':'Objects, vehicles, foods','EVENT':'Named Events',
+    'DATE':'Date','TIME':'Time','PERCENT':'Percentage','MONEY':'Money','QUANTITY':'Quantity'}
+
+    named_enities_present_related = IsEntityPresent().fit_transform(df.message[df.related==1])
+    named_enities_present_non_related = IsEntityPresent().fit_transform(related.message[df.related==0])
+
+    named_entity_data = pd.DataFrame({'Non Related': named_enities_present_related.sum(axis=0),
+    'Related': named_enities_present_non_related.sum(axis=0)}, index=all_named_entities.values())
     
     # create visuals
     # TODO: Below is an example - modify to create your own visuals
@@ -63,6 +99,36 @@ def index():
                     'title': "Genre"
                 }
             }
+        },
+
+        {
+            'data': [
+                Bar(
+                    x=named_entity_data.index.tolist(),
+                    y=named_entity_data['Non Related']
+                ),
+
+                Bar(
+                    x=named_entity_data.index.tolist(),
+                    y=named_entity_data['Related']
+                )
+            ],
+
+            'layout': {
+                'title': 'Distribution of Named Entities in Messages',
+                'yaxis': {
+                    'title': 'Count'
+                },
+                'xaxis': {
+                    'title': 'Named Entities'
+                }
+            }
+        },
+
+        {
+            'data': [
+                
+            ]
         }
     ]
     
