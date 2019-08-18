@@ -1,3 +1,4 @@
+# import libraries
 import sys
 import pandas as pd
 import numpy as np
@@ -28,26 +29,76 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report
 from sklearn.metrics import precision_recall_fscore_support
 from sklearn.base import BaseEstimator, TransformerMixin
-
 from sklearn.multioutput import MultiOutputClassifier
 from sklearn.svm import LinearSVC
 from sklearn.linear_model import SGDClassifier
 from sklearn.model_selection import GridSearchCV
 
-
+# collection of all named entities (proper nouns) in messages
 all_named_entities = {'NORP':'Nationalities','FAC':'Buildings, airports, highways','ORG':'Organizations',
     'GPE':'Geo-Political Location','LOC':'Non GPE Locations','PRODUCT':'Objects, vehicles, foods','EVENT':'Named Events',
     'DATE':'Date','TIME':'Time','PERCENT':'Percentage','MONEY':'Money','QUANTITY':'Quantity'}
 
 def tokenize(text):
+    """
+    Tokenize raw text string by removing punctuations, lemmatizing and removing stopwords
+    """
     text = re.sub(r'[^a-zA-Z0-9]', ' ', text)
     tokens = word_tokenize(text)
     clean_tokens = [WordNetLemmatizer().lemmatize(w.lower()) for w in tokens if w not in stopwords.words('english')]
     return clean_tokens
 
-class MessageLengthExtractor(BaseEstimator, TransformerMixin):
+def build_visualizations():
+    """
+    Build visualizations from loaded data
 
+    INPUTS
+    none
+
+    OUTPUT
+    dictionary mapping visualization labels to visualization data
+    """
+
+    print('\n\n', 'Building Visualization: Genre Counts...', '\n')
+    genre_counts = df.groupby('genre').count()['message']
+    genre_names = list(genre_counts.index)
+
+    print('Building Visualization: Named Entities Frequency...', '\n')
+    named_enities_present_related = IsEntityPresent().fit_transform(df.message[df.related==1])
+    named_enities_present_non_related = IsEntityPresent().fit_transform(df.message[df.related==0])
+    named_entity_data = pd.DataFrame({'Non Related': named_enities_present_related.sum(axis=0),
+        'Related': named_enities_present_non_related.sum(axis=0)}, index=all_named_entities.values())
+
+    print('Building Visualization: Category Counts...', '\n')
+    categories_count = df[df.related==1].iloc[:,5:].sum(axis=0).sort_values(ascending=False)
+
+    print('Building Visualization: Multilabel Relation Count...', '\n')
+    number_of_related = df[df.related==1].iloc[:,5:].sum(axis=1).value_counts().sort_values(ascending=False)
+
+    print('...visualization build complete', '\n\n')
+
+    visuals_dict = {'genre_counts': (genre_counts, genre_names), 'named_entities': named_entity_data,
+    'categories_count': categories_count, 'number_of_related': number_of_related}
+
+    return visuals_dict
+
+
+class MessageLengthExtractor(BaseEstimator, TransformerMixin):
+    """Message length extractor for calculating length of a string of text in an array of text messages
+
+    Attributes:
+        None
+
+    """
         def message_length(self, text):
+            """Function to calculate length of text
+
+            Args:
+                text: text to calculate length of
+
+            Returns:
+                length of text
+            """
             tokenized = tokenize(text)
             if tokenized:
                 return len(tokenized)
@@ -58,13 +109,34 @@ class MessageLengthExtractor(BaseEstimator, TransformerMixin):
             return self
 
         def transform(self, X, y=None):
+            """Function to calculate lengths of texts inside an array
+
+            Args:
+                X: 1D array of text messages
+
+            Returns:
+                1D array of text lengths
+            """
             lengths = pd.Series(X).apply(self.message_length)
             return lengths.values.reshape(-1,1)
 
 
 class StartingVerbExtractor(BaseEstimator, TransformerMixin):
+    """Starting Verb Extractor class for checking existence of starting verbs in an array of text messages
+
+    Attributes:
+        None
+    """
 
     def starting_verb(self, text):
+        """Function to check if first word in text sentence is a verb
+
+        Args:
+            text: string of text
+
+        Returns:
+            True if starting verb present; False otherwise
+        """
         sentence_list = nltk.sent_tokenize(text)
         for sentence in sentence_list:
             tokenized = tokenize(sentence)
@@ -79,15 +151,35 @@ class StartingVerbExtractor(BaseEstimator, TransformerMixin):
         return self
 
     def transform(self, X):
+        """Function to transform array of texts into boolean instances depending of existence of starting verbs in text
+
+        Args:
+            X: 1D array of text messages
+
+        Returns:
+            transformed array
+        """
         X_tagged = pd.Series(X).apply(self.starting_verb)
         return X_tagged.values.reshape(-1,1)
 
 
 
 class IsEntityPresent(BaseEstimator, TransformerMixin):
+    """Is Entity Present class to check presence of different named entities (proper nouns) in an array of text messages
 
+    Attributes:
+        None
+    """
 
     def present_entities(self, text):
+        """Function to check presence of named entity in a text
+
+        Args:
+            text: string of text
+
+        Returns:
+            list of boolean instances
+        """
         text = nlp(text)
         labels = set([x.label_ for x in text.ents])
         return [1 if entity in labels else 0 for entity in all_named_entities]
@@ -96,5 +188,13 @@ class IsEntityPresent(BaseEstimator, TransformerMixin):
         return self
     
     def transform(self, X, y=None):
+        """Function to apply present_entities function to each text in an array of texts
+
+        Args:
+            X: 1D array of texts
+
+        Returns:
+            transformed array
+        """
         entities =  pd.Series(X).apply(self.present_entities)
         return np.array(entities.values.tolist())
