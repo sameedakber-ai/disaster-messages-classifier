@@ -1,6 +1,7 @@
 import sys
 sys.path.insert(1, 'c:/code/Udacity/disaster_response/backend_analysis')
 from classes import *
+from pathlib import Path
 
 import json
 import plotly
@@ -23,8 +24,12 @@ df = pd.read_sql_table('categories', engine)
 # load model
 #model = pickle.load(open("models/analyze_disaster_messages.pkl", 'rb'))
 
-# get data from from pickled file
-visuals_data = pickle.load(open('visuals', 'rb'))
+# get data from pickled file
+try:
+    visuals_data = pickle.load(open('visuals', 'rb'))
+except:
+    build_visualizations(df)
+    visuals_data = pickle.load(open('visuals', 'rb'))
 
 # get data for genre counts plot
 genre_counts, genre_names = visuals_data['genre_counts']
@@ -75,11 +80,13 @@ def index():
         {
             'data': [
                 Bar(
+                    name='Non Related Messages',
                     x=named_entity_data.index.tolist(),
                     y=named_entity_data['Non Related']
                 ),
 
                 Bar(
+                    name='Related Messages',
                     x=named_entity_data.index.tolist(),
                     y=named_entity_data['Related']
                 )
@@ -117,7 +124,7 @@ def index():
 
         {
             'data': [
-                Scatter(
+                Bar(
                     x=number_of_related_categories.index.tolist(),
                     y=number_of_related_categories.values.tolist()
                 )
