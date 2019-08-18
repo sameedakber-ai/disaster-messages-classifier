@@ -1,8 +1,7 @@
 import sys
-
 sys.path.insert(1, 'c:/code/Udacity/disaster_response/backend_analysis')
-
 from classes import *
+import cloudpickle
 
 
 def load_data(database_filepath):
@@ -14,14 +13,14 @@ def load_data(database_filepath):
     return X, Y, category_names
 
 
-def build_model(X_train, Y_train):
+def build_model():
 
     pipeline = Pipeline([
     
         ('features', FeatureUnion([
         
             ('text_pipeline', Pipeline([
-                ('vect', CountVectorizer(tokenizer=tokenize, max_df=0.65)),
+                ('vect', CountVectorizer(tokenizer=tokenize)),
                 ('tfidf', TfidfTransformer())
             ])),
 
@@ -36,27 +35,24 @@ def build_model(X_train, Y_train):
         
         ])),
     
-        ('clf', MultiOutputClassifier(LinearSVC(max_iter=5000), n_jobs=-1))
+        ('clf', MultiOutputClassifier(LinearSVC(max_iter=5000)))
     
     ])
 
 
     parameters = {
-            'features__text_pipeline__vect__max_df': [0.4, 0.7],
+            'features__text_pipeline__vect__max_df': [0.4, 0.65],
             'features__text_pipeline__vect__max_features': [7500, 12000],
             'clf__estimator__C': [0.5, 0.8],
             'features__transformer_weights':(
                 {'text_pipeline': 1, 'entity': 1, 'length_pipeline': 1, 'verb': 1},
-                {'text_pipeline': 1, 'entity': 0, 'length_pipeline': 0.5, 'verb': 0.5}
             )
     }
 
 
     cv = GridSearchCV(pipeline, param_grid=parameters, cv=3, verbose=4, scoring='f1_micro')
 
-    cv.fit(X_train, Y_train)
-
-    return cv.best_estimator_
+    return cv
 
 
 def evaluate_model(model, X_test, Y_test, category_names):
@@ -74,7 +70,7 @@ def evaluate_model(model, X_test, Y_test, category_names):
     print('F1 score: ', pr_re_f_sup[2], '\n\n')
 
 def save_model(model, model_filepath):
-    pickle.dump(model, open(model_filepath, "wb"))
+    cloudpickle.dumps(model, open(model_filepath, "wb"))
 
 
 def main():
@@ -83,10 +79,13 @@ def main():
         print('Loading data...\n    DATABASE: {}'.format(database_filepath))
         X, Y, category_names = load_data(database_filepath)
         X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.2)
-        Y_train[1000,:] = 1
         
-        print('Building And Training model...')
-        model = build_model(X_train, Y_train)
+        
+        print('Building model...')
+        model = build_model()
+
+        print('Training model...')
+        model.fit(X_train, Y_train)
         
         print('Evaluating model...')
         evaluations = evaluate_model(model, X_test, Y_test, category_names)
