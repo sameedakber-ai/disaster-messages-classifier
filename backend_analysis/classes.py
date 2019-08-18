@@ -8,6 +8,7 @@ from scipy import sparse
 from collections import defaultdict
 import pickle
 import re
+import cloudpickle
 
 import nltk
 from nltk import pos_tag
@@ -35,8 +36,8 @@ from sklearn.linear_model import SGDClassifier
 from sklearn.model_selection import GridSearchCV
 
 # collection of all named entities (proper nouns) in messages
-all_named_entities = {'NORP':'Nationalities','FAC':'Buildings, airports, highways','ORG':'Organizations',
-    'GPE':'Geo-Political Location','LOC':'Non GPE Locations','PRODUCT':'Objects, vehicles, foods','EVENT':'Named Events',
+all_named_entities = {'NORP':'Nationalities','FAC':'Buildings,airports,roads','ORG':'Organizations',
+    'GPE':'Geo-Political Location','LOC':'Non GPE Locations','PRODUCT':'Objects,vehicles,foods','EVENT':'Named Events',
     'DATE':'Date','TIME':'Time','PERCENT':'Percentage','MONEY':'Money','QUANTITY':'Quantity'}
 
 def tokenize(text):
@@ -48,7 +49,7 @@ def tokenize(text):
     clean_tokens = [WordNetLemmatizer().lemmatize(w.lower()) for w in tokens if w not in stopwords.words('english')]
     return clean_tokens
 
-def build_visualizations():
+def build_visualizations(df):
     """
     Build visualizations from loaded data
 
@@ -64,23 +65,25 @@ def build_visualizations():
     genre_names = list(genre_counts.index)
 
     print('Building Visualization: Named Entities Frequency...', '\n')
-    named_enities_present_related = IsEntityPresent().fit_transform(df.message[df.related==1])
-    named_enities_present_non_related = IsEntityPresent().fit_transform(df.message[df.related==0])
-    named_entity_data = pd.DataFrame({'Non Related': named_enities_present_related.sum(axis=0),
-        'Related': named_enities_present_non_related.sum(axis=0)}, index=all_named_entities.values())
+    named_entities_present_related = NumberofEntitiesPresent().fit_transform(df.message[df.related==1])
+    named_entities_present_non_related = NumberofEntitiesPresent().fit_transform(df.message[df.related==0])
+    named_entity_data = pd.DataFrame({'Non Related': np.array(named_entities_present_related.sum(axis=0))/df[df.related==1].shape[0],
+        'Related': np.array(named_entities_present_non_related.sum(axis=0))/df[df.related==0].shape[0]}, index=all_named_entities.values())
 
     print('Building Visualization: Category Counts...', '\n')
     categories_count = df[df.related==1].iloc[:,5:].sum(axis=0).sort_values(ascending=False)
+    new_index = pd.Series(categories_count.index).str.replace('_', ' ').values
+    categories_count = pd.Series(categories_count.values, index=new_index)
 
     print('Building Visualization: Multilabel Relation Count...', '\n')
-    number_of_related = df[df.related==1].iloc[:,5:].sum(axis=1).value_counts().sort_values(ascending=False)
+    number_of_related = df[df.related==1].iloc[:,5:].sum(axis=1).value_counts().sort_values(ascending=False)[1:]
 
     print('...visualization build complete', '\n\n')
 
     visuals_dict = {'genre_counts': (genre_counts, genre_names), 'named_entities': named_entity_data,
     'categories_count': categories_count, 'number_of_related': number_of_related}
 
-    return visuals_dict
+    cloudpickle.dump(visuals, open('visuals', 'wb'))
 
 
 class MessageLengthExtractor(BaseEstimator, TransformerMixin):
@@ -90,35 +93,35 @@ class MessageLengthExtractor(BaseEstimator, TransformerMixin):
         None
 
     """
-        def message_length(self, text):
-            """Function to calculate length of text
+    def message_length(self, text):
+        """Function to calculate length of text
 
-            Args:
-                text: text to calculate length of
+        Args:
+            text: text to calculate length of
 
-            Returns:
-                length of text
-            """
-            tokenized = tokenize(text)
-            if tokenized:
-                return len(tokenized)
-            else:
-                return 0
+        Returns:
+            length of text
+        """
+        tokenized = tokenize(text)
+        if tokenized:
+            return len(tokenized)
+        else:
+            return 0
 
-        def fit(self, X, y=None):
-            return self
+    def fit(self, X, y=None):
+        return self
 
-        def transform(self, X, y=None):
-            """Function to calculate lengths of texts inside an array
+    def transform(self, X, y=None):
+        """Function to calculate lengths of texts inside an array
 
-            Args:
-                X: 1D array of text messages
+        Args:
+            X: 1D array of text messages
 
-            Returns:
-                1D array of text lengths
-            """
-            lengths = pd.Series(X).apply(self.message_length)
-            return lengths.values.reshape(-1,1)
+        Returns:
+            1D array of text lengths
+        """
+        lengths = pd.Series(X).apply(self.message_length)
+        return lengths.values.reshape(-1,1)
 
 
 class StartingVerbExtractor(BaseEstimator, TransformerMixin):
@@ -193,6 +196,46 @@ class IsEntityPresent(BaseEstimator, TransformerMixin):
         Args:
             X: 1D array of texts
 
+        Returns:
+            transformed array
+        """
+        entities =  pd.Series(X).apply(self.present_entities)
+        return np.array(entities.values.tolist())
+
+class NumberofEntitiesPresent(BaseEstimator, TransformerMixin):
+    """Number of Entities Present class to get the number a named entity is mentioned across an array of messages
+
+    Attributes:
+        None
+    """
+    def present_entities(self, text):
+        """Function to count the number a named entity is mentioned in a message
+
+        Args:
+            text: string of message
+
+        Returns:
+            count of entity mentions
+        """
+        text = nlp(text)
+        labels = [x.label_ for x in text.ents]
+        total=defaultdict(int)
+        for entity in all_named_entities:
+            temp=0
+            for label in labels:
+                if entity==label:
+                    temp+=1
+            total[entity]+=temp
+        return list(total.values())
+    
+    def fit(self, X, y=None):
+        return self
+    
+    def transform(self, X, y=None):
+        """Function to apply present_entities to each message in the messages array
+
+        Args:
+            X: 1D array of messages
         Returns:
             transformed array
         """
