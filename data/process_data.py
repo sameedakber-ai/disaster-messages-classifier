@@ -3,12 +3,31 @@ import pandas as pd
 from sqlalchemy import create_engine
 
 def load_data(messages_filepath, categories_filepath):
+    """
+    Load raw message and categories data into workspace
+
+    INPUT
+    messages_filepath - system path for raw disaster message data
+    categories_filepath - system path for raw disaster categories data
+
+    OUTPUT
+    pandas dataframe containing merged raw message and category data
+    """
     messages = pd.read_csv(messages_filepath)
     categories = pd.read_csv(categories_filepath)
     df = messages.merge(categories, on='id', how='left')
     return df
 
 def clean_data(df):
+    """
+    Clean and transform data to an analysis friendly format
+
+    INPUT
+    df - pandas dataframe
+
+    OUTPUT
+    clean pandas dataframe
+    """
     categories = df.categories.str.split(';', expand=True)
 
     row = categories.iloc[0,:]
@@ -29,6 +48,13 @@ def clean_data(df):
     return df
 
 def save_data(df, database_filepath):
+    """
+    Load data onto file
+
+    INPUT
+    df - pandas dataframe
+    database_filepath - file location to save data to
+    """
     engine = create_engine('sqlite:///{}'.format(database_filepath))
     df.to_sql('categories', engine, index=False, if_exists='replace')
 
