@@ -1,5 +1,6 @@
 import sys
 sys.path.insert(1, 'c:/code/Udacity/disaster_response/backend_analysis')
+from classes import *
 
 import json
 import plotly
@@ -11,8 +12,7 @@ from flask import render_template, request, jsonify
 from plotly.graph_objs import Bar
 from plotly.graph_objs import Scatter
 
-from classes import *
-
+import cloudpickle
 
 app = Flask(__name__)
 
@@ -21,24 +21,37 @@ engine = create_engine('sqlite:///data/disaster_database.db')
 df = pd.read_sql_table('categories', engine)
 
 # load model
-model = pickle.load(open("models/analyze_disaster_messages.pkl", 'rb'))
+#model = pickle.load(open("models/analyze_disaster_messages.pkl", 'rb'))
+
+def build_visualizations():
+    # extract data needed for visuals
+    print('Building Visualization: Genre Counts...', '\n')
+    genre_counts = df.groupby('genre').count()['message']
+    genre_names = list(genre_counts.index)
+
+    print('Building Visualization: Named Entities Frequency...', '\n')
+    named_enities_present_related = IsEntityPresent().fit_transform(df.message[df.related==1])
+    named_enities_present_non_related = IsEntityPresent().fit_transform(related.message[df.related==0])
+    named_entity_data = pd.DataFrame({'Non Related': named_enities_present_related.sum(axis=0),
+        'Related': named_enities_present_non_related.sum(axis=0)}, index=all_named_entities.values())
+
+    print('Building Visualization: Category Counts...', '\n')
+    categories_count = df[df.related==1].iloc[:,5:].sum(axis=0).sort_values(ascending=False)
+
+    print('Building Visualization: Multilabel Relation Count...', '\n')
+    number_of_related = df[df.related==1].iloc[:,5:].sum(axis=1).value_counts().sort_values(ascending=False)
+
+    print('...visualization build complete', '\n\n')
+
+    visuals_dict = {'genre_counts': (genre_counts, genre_names), 'named_entities': named_entity_data,
+    'categories_count': categories_count, 'number_of_related': number_of_related}
+
+    return visuals_dict
+
+visuals = build_visualizations()
+cloudpickle.dumps(visuals, open('visuals', 'wb'))
 
 
-print('Building Visualizations...')
-
-# extract data needed for visuals
-genre_counts = df.groupby('genre').count()['message']
-genre_names = list(genre_counts.index)
-
-named_enities_present_related = IsEntityPresent().fit_transform(df.message[df.related==1])
-named_enities_present_non_related = IsEntityPresent().fit_transform(related.message[df.related==0])
-named_entity_data = pd.DataFrame({'Non Related': named_enities_present_related.sum(axis=0),
-    'Related': named_enities_present_non_related.sum(axis=0)}, index=all_named_entities.values())
-
-
-categories_count = df[df.related==1].iloc[:,5:].sum(axis=0).sort_values(ascending=False)
-
-number_of_related = df[df.related==1].iloc[:,5:].sum(axis=1).value_counts().sort_values(ascending=False)
 
 # index webpage displays cool visuals and receives user input text for model
 @app.route('/')
