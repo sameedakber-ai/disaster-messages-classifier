@@ -83,7 +83,7 @@ def main():
         print('Loading data...\n    DATABASE: {}'.format(database_filepath))
         X, Y, category_names = load_data(database_filepath)
         X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.2)
-        Y_train[0,9] = 1
+        Y_train[1000,:] = 1
         
         print('Building And Training model...')
         model = build_model(X_train, Y_train)
