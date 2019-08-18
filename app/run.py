@@ -23,40 +23,33 @@ df = pd.read_sql_table('categories', engine)
 # load model
 #model = pickle.load(open("models/analyze_disaster_messages.pkl", 'rb'))
 
-def build_visualizations():
-    # extract data needed for visuals
-    print('Building Visualization: Genre Counts...', '\n')
-    genre_counts = df.groupby('genre').count()['message']
-    genre_names = list(genre_counts.index)
+# get data from from pickled file
+visuals_data = pickle.load(open('visuals', 'rb'))
 
-    print('Building Visualization: Named Entities Frequency...', '\n')
-    named_enities_present_related = IsEntityPresent().fit_transform(df.message[df.related==1])
-    named_enities_present_non_related = IsEntityPresent().fit_transform(related.message[df.related==0])
-    named_entity_data = pd.DataFrame({'Non Related': named_enities_present_related.sum(axis=0),
-        'Related': named_enities_present_non_related.sum(axis=0)}, index=all_named_entities.values())
+# get data for genre counts plot
+genre_counts, genre_names = visuals_data['genre_counts']
 
-    print('Building Visualization: Category Counts...', '\n')
-    categories_count = df[df.related==1].iloc[:,5:].sum(axis=0).sort_values(ascending=False)
+# get data for number of named entities in disaster related plot
+named_entity_data = visuals_data['named_entities']
 
-    print('Building Visualization: Multilabel Relation Count...', '\n')
-    number_of_related = df[df.related==1].iloc[:,5:].sum(axis=1).value_counts().sort_values(ascending=False)
+# get data for category counts in disaster related plot
+categories_count = visuals_data['categories_count']
 
-    print('...visualization build complete', '\n\n')
-
-    visuals_dict = {'genre_counts': (genre_counts, genre_names), 'named_entities': named_entity_data,
-    'categories_count': categories_count, 'number_of_related': number_of_related}
-
-    return visuals_dict
-
-visuals = build_visualizations()
-cloudpickle.dumps(visuals, open('visuals', 'wb'))
-
-
+# get data for number of related categories plot
+number_of_related_categories = visuals_data['number_of_related']
 
 # index webpage displays cool visuals and receives user input text for model
 @app.route('/')
 @app.route('/index')
 def index():
+    """Get data for visuals detailing an overview of the training dataset and send plot data to the front end via the flask app
+
+    Args:
+        None
+
+    Returns:
+        plot data
+    """
 
     # create visuals
     graphs = [
@@ -125,8 +118,8 @@ def index():
         {
             'data': [
                 Scatter(
-                    x=number_of_related.index.tolist(),
-                    y=number_of_related.values.tolist()
+                    x=number_of_related_categories.index.tolist(),
+                    y=number_of_related_categories.values.tolist()
                 )
             ],
 
@@ -153,6 +146,14 @@ def index():
 # web page that handles user query and displays model results
 @app.route('/go')
 def go():
+    """Make label predictions on user querry and send predicted labels to the frontend via the flask app
+
+    Args:
+        None
+
+    Returns:
+        classification results
+        """
     # save user input in query
     query = request.args.get('query', '') 
 
