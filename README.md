@@ -55,9 +55,9 @@ This will start up the webapp. Go to 'http://127.0.0.1:3001' to access the webap
 ![WebApp Starting](images/screens/running.png "webapp starting...")
 
 ### Advanced installation option
-This option is indented for someone looking to reprocess raw data and retraining a classifier. This option is not recommended due to training times. However, it does help in understanding the code.
+This option is intended for someone looking to reprocess raw data and retraining a classifier. This option is not recommended due to long training times. However, it does help in understanding the code.
 
-After cloning the repository, process and transform raw data into a usable object and pickle database to file
+After cloning the repository, process and transform raw data into a usable database; pickle database to file
 
 ```
 python ./data/process_data.py ./data/disaster_messages.csv ./data/disaster_categories.csv ./data/disaster_database.db
