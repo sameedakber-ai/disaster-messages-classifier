@@ -43,6 +43,9 @@ def clean_data(df):
 
     df.related.where(df.related != 2, 0, inplace=True)
 
+    # remove 'child alone' category as it contains only
+    # a singular class (0). Binary classifiers need atleast
+    # 2 classes for training 
     df.drop('child_alone', axis=1, inplace=True)
 
     return df
