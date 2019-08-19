@@ -2,7 +2,7 @@
 
 Disaster response is a message classification webapp that categorizes aid related messages under different labels.
 
-##Motivation
+## Motivation
 
 Following a natural disaster, there is a sharp increase in aid related communications in the form of either increased social media 
 activity or direct contact with first responders. This usually comes at a time when disaster response professionals have the
@@ -92,7 +92,7 @@ Add additional notes about how to deploy this on a live system
 
 ## Authors
 
-* **Sameed** - *disaster_response* - [sameedakber-ai](https://github.com/sameedakber-ai)
+* **Sameed** - *disaster-response* - [sameedakber-ai](https://github.com/sameedakber-ai)
 
 ## License
 
