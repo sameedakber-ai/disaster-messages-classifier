@@ -36,8 +36,8 @@ from sklearn.linear_model import SGDClassifier
 from sklearn.model_selection import GridSearchCV
 
 # collection of all named entities (proper nouns) in messages
-all_named_entities = {'NORP':'Nationalities','FAC':'Buildings,airports,roads','ORG':'Organizations',
-    'GPE':'Geo-Political Location','LOC':'Non GPE Locations','PRODUCT':'Objects,vehicles,foods','EVENT':'Named Events',
+all_named_entities = {'NORP':'Nationalities','FAC':'Buildings,roads','ORG':'Organizations',
+    'GPE':'Countries,cities','LOC':'Mountains,lakes','PRODUCT':'Objects,vehicles,foods','EVENT':'Named Events',
     'DATE':'Date','TIME':'Time','PERCENT':'Percentage','MONEY':'Money','QUANTITY':'Quantity'}
 
 def tokenize(text):
@@ -83,7 +83,7 @@ def build_visualizations(df):
     visuals_dict = {'genre_counts': (genre_counts, genre_names), 'named_entities': named_entity_data,
     'categories_count': categories_count, 'number_of_related': number_of_related}
 
-    cloudpickle.dump(visuals, open('visuals', 'wb'))
+    cloudpickle.dump(visuals_dict, open('app/visuals', 'wb'))
 
 
 class MessageLengthExtractor(BaseEstimator, TransformerMixin):
