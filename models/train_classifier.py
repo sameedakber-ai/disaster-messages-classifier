@@ -1,6 +1,9 @@
 import sys
-sys.path.insert(1, 'c:/code/Udacity/disaster_response/backend_analysis')
+import os
+classes_path = os.path.join(os.getcwd(), 'backend_analysis')
+sys.path.insert(1, classes_path)
 from classes import *
+
 import cloudpickle
 
 
