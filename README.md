@@ -13,18 +13,26 @@ to classify messages into different categories. Labeled message data is provided
 
 ## Installation
 
-These instructions will get you a copy of the project up and running on your local machine for development and testing purposes. See deployment for notes on how to deploy the project on a live system.
+These instructions will get you a copy of the project up and running on your local machine for development and testing purposes. See deployment for notes on how to deploy the project on heroku.
+
+Deploy webapp to heroku
+
+[![Deploy to Heroku](images/deploy_to_heroku.png "Deploy to heroku")](https://dashboard.heroku.com/apps/second-attempt-sameed-akber)
 
 ### Prerequisites
 
-The following libraries will need to be installed and/or updated to run the code in Anaconda v4.7.* running python v3.6. 
+The following libraries will need to be installed to run the code in Anaconda v4.7.* running python v3.6.* 
 
 ```
-conda install conda-forge::cloudpickle
-conda install conda-forge::spacy
+conda install conda-forge::scikit-learn
+conda install conda-forge::matplotlib
 conda install conda-forge::nltk
 conda install conda-forge::sqlalchemy
-conda update scikit-learn
+conda install conda-forge::cloudpickle
+conda install conda-forge::dill
+conda install conda-forge::spacy
+pip install https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-2.1.0/en_core_web_sm-2.1.0.tar.gz#egg=en_core_web_sm==2.1.0
+
 ```
 
 ### Installing
@@ -36,24 +44,27 @@ git clone https://github.com/sameedakber-ai/disaster-response.git
 
 ```
 
+
 Run the WebApp from the main working directory
 
 ```
 python app/run.py
 ```
 
-This will open up a webapp that displays information about the data used to train the classification model. When given a message to classify, the webapp will display all categories, with the relevant ones highlighted in green.
+This will start up the webapp. Go to 'http://127.0.0.1:3001' to access the webapp on your default web browser.
+![WebApp Starting](images/screens/running.png "webapp starting...")
 
-### Advanced installation options
+### Advanced installation option
+This option is indented for someone looking to reprocess raw data and retraining a classifier. This option is not recommended due to training times. However, it does help in understanding the code.
 
-After cloning the repository, process and transform raw data into a usable object; save pickled database to file
+After cloning the repository, process and transform raw data into a usable object and pickle database to file
 
 ```
 python ./data/process_data.py ./data/disaster_messages.csv ./data/disaster_categories.csv ./data/disaster_database.db
 
 ```
 
-Train and evaluate classifier on processed data (contained in database); save pickled model to file
+Train and evaluate classifier on processed data (contained in database) and pickle model to file
 
 ```
 python ./models/train_classifier.py ./data/disaster_database.db ./models/analyze_disaster_messages
@@ -83,7 +94,39 @@ python app/run.py
 
 ## Deployment
 
-Add additional notes about how to deploy this on a live system
+Clone the repository
+
+```
+git clone https://github.com/sameedakber-ai/disaster-response.git
+
+```
+
+Install the [necessary packages](#prerequisites)
+
+Setup heroku CLI
+
+Login to heroku
+
+```
+heroku login
+
+```
+
+Create a heroku app
+
+```
+heroku create your-package-name
+
+```
+
+Commit and push to heroku
+
+```
+git add .
+git commit -m'your commit message'
+git push heroku master
+
+```
 
 ## Built With
 
