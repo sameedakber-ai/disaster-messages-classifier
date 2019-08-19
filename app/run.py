@@ -1,5 +1,7 @@
 import sys
-sys.path.insert(1, 'c:/code/Udacity/disaster_response/backend_analysis')
+import os
+classes_path = os.path.join(os.getcwd(), 'backend_analysis')
+sys.path.insert(1, classes_path)
 from classes import *
 from pathlib import Path
 
@@ -22,14 +24,14 @@ engine = create_engine('sqlite:///data/disaster_database.db')
 df = pd.read_sql_table('categories', engine)
 
 # load model
-#model = pickle.load(open("models/analyze_disaster_messages.pkl", 'rb'))
+model = pickle.load(open("models/analyze_disaster_messages", 'rb'))
 
-# get data from pickled file
+# get data from pickled file. If file doesn't exist, create file
 try:
-    visuals_data = pickle.load(open('visuals', 'rb'))
+    visuals_data = pickle.load(open('app/visuals', 'rb'))
 except:
     build_visualizations(df)
-    visuals_data = pickle.load(open('visuals', 'rb'))
+    visuals_data = pickle.load(open('app/visuals', 'rb'))
 
 # get data for genre counts plot
 genre_counts, genre_names = visuals_data['genre_counts']
@@ -80,32 +82,6 @@ def index():
         {
             'data': [
                 Bar(
-                    name='Non Related Messages',
-                    x=named_entity_data.index.tolist(),
-                    y=named_entity_data['Non Related']
-                ),
-
-                Bar(
-                    name='Related Messages',
-                    x=named_entity_data.index.tolist(),
-                    y=named_entity_data['Related']
-                )
-            ],
-
-            'layout': {
-                'title': 'Distribution of Named Entities in Messages',
-                'yaxis': {
-                    'title': 'Count'
-                },
-                'xaxis': {
-                    'title': 'Named Entities'
-                }
-            }
-        },
-
-        {
-            'data': [
-                Bar(
                     x=categories_count.index.tolist(),
                     y=categories_count.values.tolist()
                 )
@@ -139,7 +115,34 @@ def index():
                     'title': 'Number of Related Labels'
                 }
             }
-        }
+        },
+
+        {
+            'data': [
+                Bar(
+                    name='Non Related Messages',
+                    x=named_entity_data.index.tolist(),
+                    y=named_entity_data['Non Related']
+                ),
+
+                Bar(
+                    name='Related Messages',
+                    x=named_entity_data.index.tolist(),
+                    y=named_entity_data['Related']
+                )
+            ],
+
+            'layout': {
+                'title': 'Distribution of Named Entities in Messages',
+                'yaxis': {
+                    'title': 'Count'
+                },
+                'xaxis': {
+                    'title': 'Named Entities'
+                }
+            }
+        },
+
     ]
     
     # encode plotly graphs in JSON
