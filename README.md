@@ -4,7 +4,7 @@ disaster messages classifier is a message classification webapp that categorizes
 
 Webapp:
 
-[![Deploy to Heroku](images/heroku.png "Deploy to heroku")](https://disaster-messages-classifier.herokuapp.com/)
+[![Heroku Webapp](images/heroku.png "Deploy to heroku")](https://disaster-messages-classifier.herokuapp.com/)
 
 ## Motivation
 
@@ -15,13 +15,30 @@ different organizations address different parts of the problem. For example, one
 another about food, and yet another about infrastructure. The objective of this project is to use a supervised learning approach
 to classify messages into different categories. Labeled message data is provided by [figure eight](https://www.figure-eight.com).
 
+## Description
+
+There are three stages in the development of this webapp
+
++ Extract-Transform-Load (ETL) pipeline to load raw data, transform it and save clean data to a database
++ Machine Learning (ML) pipeline to train and evaluate message classifier on clean data
++ Webapp Configuration to send visuals and classification results (on user querry) to the front end
+
+### File descriptions
+
++ data/process_data.py : ETL pipeline
++ models/train_classifier.py : ML pipeline
++ app/run.py : Webapp configuration
++ backend_analysis/classes.py : classes and functions for ETL and ML pipelines
++ Procfile, requirements.txt: Required files for deployment to heroku
+
+
 ## Installation
 
 These instructions will get you a copy of the project up and running on your local machine for development and testing purposes. See deployment for notes on how to deploy the project on heroku.
 
 ### Prerequisites
 
-The following libraries will need to be installed to run the code in Anaconda v4.7.* running python v3.6.* 
+The following libraries will need to be installed to run the configure the webapp in Anaconda v4.7.* running python v3.6.* 
 
 ```
 conda install conda-forge::scikit-learn
@@ -55,7 +72,7 @@ This will start up the webapp. Go to 'http://127.0.0.1:3001' to access the webap
 ![WebApp Starting](images/screens/running.png "webapp starting...")
 
 ### Advanced installation option
-This option is intended for someone looking to reprocess raw data and retraining a classifier. This option is not recommended due to long training times. However, it does help in understanding the code.
+This option is intended for someone looking to reprocess raw data and retraining a classifier. This option is not recommended due to long training times. However, it does help in understanding the code better.
 
 After cloning the repository, process and transform raw data into a usable database; pickle database to file
 
@@ -90,7 +107,16 @@ Run the WebApp from the main working directory
 ```
 python app/run.py
 ```
-![WebApp](images/screens/webapp.png "webapp")
+
+## Results
+
+![plot 1](images/screens/webapp.png "webapp 1")
+
+![plot 2](images/screens/plot_2.png "webapp 2")
+
+![plot 3](images/screens/plot_3.png "webapp 3")
+
+![plot 4](images/screens/plot_4.png "webapp 4")
 
 ## Deployment
 
