@@ -49,7 +49,7 @@ number_of_related_categories = visuals_data['number_of_related']
 @app.route('/')
 @app.route('/index')
 def index():
-    """Get data for visuals detailing an overview of the training dataset and send plot data to the front end via the flask app
+    """Get data for visuals detailing an overview of the training dataset and send plot data to the front end via flask app
 
     Args:
         None
@@ -120,15 +120,8 @@ def index():
         {
             'data': [
                 Bar(
-                    name='Non Related Messages',
                     x=named_entity_data.index.tolist(),
-                    y=named_entity_data['Non Related']
-                ),
-
-                Bar(
-                    name='Related Messages',
-                    x=named_entity_data.index.tolist(),
-                    y=named_entity_data['Related']
+                    y=named_entity_data.values.tolist()
                 )
             ],
 
@@ -141,7 +134,7 @@ def index():
                     'title': 'Named Entities'
                 }
             }
-        },
+        }
 
     ]
     
