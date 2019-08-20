@@ -126,7 +126,7 @@ def index():
             ],
 
             'layout': {
-                'title': 'Distribution of Named Entities in Messages',
+                'title': 'Distribution of Named Entities in Aid Related Messages',
                 'yaxis': {
                     'title': 'Count'
                 },
