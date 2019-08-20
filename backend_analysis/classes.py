@@ -66,9 +66,7 @@ def build_visualizations(df):
 
     print('Building Visualization: Named Entities Frequency...', '\n')
     named_entities_present_related = NumberofEntitiesPresent().fit_transform(df.message[df.related==1])
-    named_entities_present_non_related = NumberofEntitiesPresent().fit_transform(df.message[df.related==0])
-    named_entity_data = pd.DataFrame({'Non Related': np.array(named_entities_present_related.sum(axis=0))/df[df.related==1].shape[0],
-        'Related': np.array(named_entities_present_non_related.sum(axis=0))/df[df.related==0].shape[0]}, index=all_named_entities.values())
+    named_entity_data = pd.Series(np.array(named_entities_present_related.sum(axis=0)), index=all_named_entities.values())
 
     print('Building Visualization: Category Counts...', '\n')
     categories_count = df[df.related==1].iloc[:,5:].sum(axis=0).sort_values(ascending=False)
