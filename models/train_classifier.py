@@ -1,3 +1,4 @@
+#import modules
 import sys
 import os
 classes_path = os.path.join(os.getcwd(), 'backend_analysis')
@@ -8,6 +9,16 @@ import cloudpickle
 
 
 def load_data(database_filepath):
+    """Load processed data from database
+    
+    Args:
+        database_filepath: sqlite database containing message/category data
+
+    Returns:
+        X: list of messages
+        Y: 2D array of category values (1's or 0's)
+        category_names: names of all categories
+    """
     engine = create_engine('sqlite:///{}'.format(database_filepath))
     df = pd.read_sql_table('categories', con=engine)
     category_names = df.iloc[:,4:].columns.tolist()
@@ -17,6 +28,14 @@ def load_data(database_filepath):
 
 
 def build_model():
+    """Build pipeline to transform train data and fit model to train data
+
+    Args:
+        None
+
+    Returns:
+        Instance of grid search object
+    """
 
     pipeline = Pipeline([
     
@@ -59,6 +78,16 @@ def build_model():
 
 
 def evaluate_model(model, X_test, Y_test, category_names):
+    """Evaluate model on test data
+
+    Args:
+        model: message classifier
+        X_test: test data (messages)
+        Y_test: test data (category values)
+
+    Returns:
+        None
+    """
     Y_pred = model.predict(X_test)
     for i,cat in enumerate(category_names):
         pred = Y_pred[:,i]
@@ -73,6 +102,8 @@ def evaluate_model(model, X_test, Y_test, category_names):
     print('F1 score: ', pr_re_f_sup[2], '\n\n')
 
 def save_model(model, model_filepath):
+    """Pickle object to file
+    """
     cloudpickle.dump(model, open(model_filepath, "wb"))
 
 
