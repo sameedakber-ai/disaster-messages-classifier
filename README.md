@@ -1,6 +1,10 @@
-# disaster_response
+# disaster-messages-classifier
 
-Disaster response is a message classification webapp that categorizes aid related messages under different labels.
+disaster messages classifier is a message classification webapp that categorizes aid related messages under different labels.
+
+Webapp:
+
+[![Deploy to Heroku](images/heroku.png "Deploy to heroku")](https://disaster-messages-classifier.herokuapp.com/)
 
 ## Motivation
 
@@ -14,10 +18,6 @@ to classify messages into different categories. Labeled message data is provided
 ## Installation
 
 These instructions will get you a copy of the project up and running on your local machine for development and testing purposes. See deployment for notes on how to deploy the project on heroku.
-
-Deploy webapp to heroku
-
-[![Deploy to Heroku](images/deploy_to_heroku.png "Deploy to heroku")](https://dashboard.heroku.com/apps/second-attempt-sameed-akber)
 
 ### Prerequisites
 
@@ -135,7 +135,7 @@ git push heroku master
 
 ## Authors
 
-* **Sameed** - *disaster-response* - [sameedakber-ai](https://github.com/sameedakber-ai)
+* **Sameed Akber** - *disaster-response* - [sameedakber-ai](https://github.com/sameedakber-ai)
 
 ## License
 
@@ -149,6 +149,9 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 ## Acknowledgments
 
-* [Udacity](https://www.udacity.com)
-* [figure-eight](https://www.figure-eight.com)
+[![Udacity](images/udacity.png "udacity logo")](https://www.udacity.com)
+
+[![figure-eight](images/figure-eight.jpg "figure-eight logo")](https://www.figure-eight.com)
+
+[![heroku](images/heroku.png "heroku logo")](https://dashboard.heroku.com)
 
